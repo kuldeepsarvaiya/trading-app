@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#090d16">
+  <title>AlphaTrader Mobile | Safe Intraday Algo Bot</title>
+  
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2622/2622839.png">
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            bgDark: '#090d16',
+            cardDark: '#121827',
+            cardBorder: '#1f293d',
+            neonGreen: '#10b981',
+            neonRed: '#f43f5e',
+            neonBlue: '#3b82f6',
+            neonYellow: '#f59e0b',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f1f5f9;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .glass-card {
+      background: rgba(18, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glow-green {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.3);
+    }
+    .glow-red {
+      box-shadow: 0 0 25px -2px rgba(244, 63, 94, 0.4);
+    }
+    .pin-dot {
+      transition: all 0.2s ease;
+    }
+    .pin-dot.filled {
+      background-color: #10b981;
+      box-shadow: 0 0 10px #10b981;
+    }
+    /* Hide scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col pb-24">
+
+  <!-- ============================================================== -->
+  <!-- 🔒 OFFICE SAFETY PIN LOCK MODAL OVERLAY -->
+  <!-- ============================================================== -->
+  <div id="pinModal" class="fixed inset-0 z-50 bg-[#090d16]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 transition-all duration-300">
+    <div class="w-full max-w-xs text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mx-auto text-blue-400 text-2xl shadow-lg">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-white tracking-wide">Office Security PIN</h2>
+        <p class="text-xs text-slate-400 mt-1">Enter your 4-digit PIN to access live controls</p>
+      </div>
+
+      <!-- PIN Dots -->
+      <div class="flex justify-center space-x-4 py-2">
+        <div id="dot-0" class="pin-dot w-4 h-4 rounded-full border border-slate-600 bg-slate-800"></div>
+        <div id="dot-1" class="pin-dot w-4 h-4 rounded-full border border-slate-600 bg-slate-800"></div>
+        <div id="dot-2" class="pin-dot w-4 h-4 rounded-full border border-slate-600 bg-slate-800"></div>
+        <div id="dot-3" class="pin-dot w-4 h-4 rounded-full border border-slate-600 bg-slate-800"></div>
+      </div>
+      <p id="pinError" class="text-xs font-semibold text-rose-400 h-4"></p>
+
+      <!-- Keypad -->
+      <div class="grid grid-cols-3 gap-3">
+        <button onclick="pressKey('1')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">1</button>
+        <button onclick="pressKey('2')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">2</button>
+        <button onclick="pressKey('3')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">3</button>
+        <button onclick="pressKey('4')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">4</button>
+        <button onclick="pressKey('5')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">5</button>
+        <button onclick="pressKey('6')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">6</button>
+        <button onclick="pressKey('7')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">7</button>
+        <button onclick="pressKey('8')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">8</button>
+        <button onclick="pressKey('9')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">9</button>
+        <button onclick="clearPin()" class="h-14 rounded-xl bg-rose-500/10 active:bg-rose-500/20 text-rose-400 font-bold border border-rose-500/20 text-sm">CLR</button>
+        <button onclick="pressKey('0')" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-xl font-semibold border border-slate-700/60">0</button>
+        <button onclick="backspacePin()" class="h-14 rounded-xl bg-slate-800/80 active:bg-slate-700 text-slate-400 border border-slate-700/60"><i class="fa-solid fa-delete-left"></i></button>
+      </div>
+      <p class="text-[10px] text-slate-500 text-center">Default Office PIN: <span class="text-slate-400 font-mono">1234</span></p>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- 🚨 EMERGENCY CONFIRMATION MODAL -->
+  <!-- ============================================================== -->
+  <div id="confirmKillModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-6 border-rose-500/40 glow-red space-y-4">
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xl mx-auto">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div class="text-center">
+        <h3 class="text-lg font-bold text-white">Emergency Kill Switch</h3>
+        <p class="text-xs text-slate-300 mt-1">
+          Are you sure you want to <span class="text-rose-400 font-bold">CLOSE ALL OPEN POSITIONS</span> immediately at market rate and halt the bot?
+        </p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 pt-2">
+        <button onclick="closeKillModal()" class="py-3 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs active:bg-slate-700 border border-slate-700">Cancel</button>
+        <button onclick="executeKillSwitch()" class="py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-900/50 active:scale-95 transition-all">YES, CLOSE ALL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- TOP APP HEADER -->
+  <!-- ============================================================== -->
+  <header class="sticky top-0 z-30 bg-[#090d16]/90 backdrop-blur-md border-b border-cardBorder px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+        <i class="fa-solid fa-chart-line text-sm"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-sm font-extrabold tracking-tight text-white">AlphaTrader</span>
+          <span id="headerStatusPill" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            LIVE
+          </span>
+        </div>
+        <p class="text-[10px] text-slate-400 font-mono" id="headerClock">--:--:-- IST</p>
+      </div>
+    </div>
+
+    <!-- Quick Lock & Connection -->
+    <div class="flex items-center space-x-2">
+      <button onclick="runSimulation()" title="Quick 3-Sec Simulation" class="px-2.5 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold flex items-center gap-1 active:scale-95">
+        <i class="fa-solid fa-flask text-[10px]"></i>
+        <span class="text-[10px]">Demo</span>
+      </button>
+      <button onclick="lockApp()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs border border-slate-700 active:scale-95">
+        <i class="fa-solid fa-lock"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- MAIN SCROLLABLE CONTENT -->
+  <!-- ============================================================== -->
+  <main class="flex-1 px-4 py-3 space-y-4 overflow-y-auto no-scrollbar max-w-lg mx-auto w-full">
+
+    <!-- 1. HERO P&L & CAPITAL CARD -->
+    <div class="glass-card rounded-3xl p-5 relative overflow-hidden">
+      <!-- Glow gradient accent -->
+      <div id="pnlGlow" class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/20 blur-2xl"></div>
+
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span>Today's Intraday P&L</span>
+        <span id="marketBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">Checking...</span>
+      </div>
+
+      <div class="mt-2 flex items-baseline space-x-2">
+        <h1 id="netPnlText" class="text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">₹0.00</h1>
+        <span id="roiBadge" class="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono">+0.0%</span>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-800/80">
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Equity</span>
+          <span id="portfolioValue" class="text-xs font-bold text-white font-mono">₹50,000</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Avail Cash</span>
+          <span id="cashBalance" class="text-xs font-bold text-slate-200 font-mono">₹50,000</span>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Win Rate</span>
+          <span id="winRate" class="text-xs font-bold text-cyan-400 font-mono">0.0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. SAFETY CIRCUIT BREAKER & AUTO SQUARE-OFF GUARD -->
+    <div class="glass-card rounded-2xl p-4 border border-cardBorder">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-200">
+          <i class="fa-solid fa-shield-virus text-amber-400"></i>
+          <span>Risk Shield (Daily Circuit Limit)</span>
+        </div>
+        <span id="squareOffCountdown" class="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">Auto Sq: 15:15 IST</span>
+      </div>
+
+      <!-- Risk Meter Bar -->
+      <div class="space-y-1">
+        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
+          <div id="riskBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+          <span>Loss Used: <b id="lossUsedText" class="text-white">0.0%</b></span>
+          <span>Max Cap: <b id="maxLossText" class="text-rose-400">3.0% (-₹1,500)</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. EMERGENCY KILL SWITCH & BOT ACTIONS -->
+    <div class="space-y-2">
+      <!-- Big Kill Switch -->
+      <button onclick="openKillModal()" class="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-extrabold text-sm shadow-lg shadow-rose-950/60 glow-red flex items-center justify-center space-x-2 active:scale-98 transition-all">
+        <i class="fa-solid fa-radiation text-base animate-pulse"></i>
+        <span>EMERGENCY SQUARE-OFF (KILL SWITCH)</span>
+      </button>
+
+      <!-- Bot Start / Pause Toggle -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btnStartBot" onclick="toggleBotState('start')" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 text-xs font-bold flex items-center justify-center space-x-1.5 active:scale-95 transition-all">
+          <i class="fa-solid fa-play"></i>
+          <span>Resume Bot</span>
+        </button>
+        <button id="btnPauseBot" onclick="toggleBotState('pause')" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 text-xs font-bold flex items-center justify-center space-x-1.5 active:scale-95 transition-all">
+          <i class="fa-solid fa-pause"></i>
+          <span>Pause Bot</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. TAB CONTENTS -->
+    <!-- TAB A: ACTIVE POSITIONS -->
+    <section id="tab-positions" class="tab-content space-y-3">
+      <div class="flex items-center justify-between text-xs px-1">
+        <h2 class="font-bold text-white flex items-center gap-1.5">
+          <span>Active Positions</span>
+          <span id="posCountBadge" class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-mono px-1.5 py-0.2 rounded-full">0</span>
+        </h2>
+        <span class="text-[10px] text-slate-400">1:2 R:R Enforced</span>
+      </div>
+
+      <div id="positionsList" class="space-y-2.5">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB B: MOMENTUM SCREENER -->
+    <section id="tab-screener" class="tab-content hidden space-y-3">
+      <div class="flex items-center justify-between text-xs px-1">
+        <h2 class="font-bold text-white flex items-center gap-1.5">
+          <span>⚡ 10-15% Momentum Runners</span>
+        </h2>
+        <span class="text-[10px] text-emerald-400 font-mono">Confluence Score</span>
+      </div>
+      <div id="screenerList" class="space-y-2">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB C: CLOSED TRADES HISTORY -->
+    <section id="tab-history" class="tab-content hidden space-y-3">
+      <div class="flex items-center justify-between text-xs px-1">
+        <h2 class="font-bold text-white">Closed Trades Audit</h2>
+        <span class="text-[10px] text-slate-400">Today's Ledger</span>
+      </div>
+      <div id="historyList" class="space-y-2">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB D: SETTINGS & RISK -->
+    <section id="tab-settings" class="tab-content hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 space-y-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-cyan-400"></i>
+          <span>App & Risk Configuration</span>
+        </h2>
+
+        <!-- Change PIN -->
+        <div class="space-y-2 border-b border-slate-800 pb-3">
+          <label class="text-xs text-slate-300 font-semibold block">Change Office Security PIN</label>
+          <div class="flex space-x-2">
+            <input id="oldPinInput" type="password" maxlength="4" placeholder="Old PIN" class="w-1/2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-center text-white focus:outline-none focus:border-cyan-500">
+            <input id="newPinInput" type="password" maxlength="4" placeholder="New PIN" class="w-1/2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-center text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <button onclick="updatePin()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold text-xs rounded-xl border border-cyan-500/30">Update PIN</button>
+        </div>
+
+        <!-- In-App Risk Controls -->
+        <div class="space-y-2 border-b border-slate-800 pb-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-slate-300 font-semibold">Active Risk Controls</label>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">100% Free Mode</span>
+          </div>
+          <p class="text-[10px] text-slate-400">Strict intraday safety rules enforced automatically on mobile & cloud.</p>
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+            <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">RISK / TRADE</span>
+              <span class="text-amber-400 font-bold">1.0% Capital</span>
+            </div>
+            <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">CIRCUIT BREAKER</span>
+              <span class="text-rose-400 font-bold">3.0% Max Loss</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+            <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">TARGET R:R</span>
+              <span class="text-emerald-400 font-bold">1:2 Minimum</span>
+            </div>
+            <div class="bg-slate-900 p-2 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block text-[9px]">AUTO SQUARE-OFF</span>
+              <span class="text-cyan-400 font-bold">15:15 IST</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cloud Info -->
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+          <div class="font-bold text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-cloud text-blue-400"></i>
+            <span>Office Mode (PC Off)</span>
+          </div>
+          <p class="text-slate-400 text-[10px]">
+            Deploy this app on Render.com or Railway to run 24/7 for free during office hours. Your home PC can stay completely OFF!
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- BOTTOM APP NAVIGATION BAR (Mobile Style) -->
+  <!-- ============================================================== -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#090d16]/95 backdrop-blur-lg border-t border-cardBorder py-2 px-6 flex justify-between items-center max-w-lg mx-auto">
+    <button onclick="switchTab('positions')" id="nav-positions" class="nav-btn flex flex-col items-center text-cyan-400 active:scale-95 transition-all">
+      <i class="fa-solid fa-layer-group text-sm"></i>
+      <span class="text-[10px] font-semibold mt-1">Positions</span>
+    </button>
+    <button onclick="switchTab('screener')" id="nav-screener" class="nav-btn flex flex-col items-center text-slate-400 hover:text-white active:scale-95 transition-all">
+      <i class="fa-solid fa-bolt text-sm"></i>
+      <span class="text-[10px] font-semibold mt-1">Screener</span>
+    </button>
+    <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center text-slate-400 hover:text-white active:scale-95 transition-all">
+      <i class="fa-solid fa-clock-rotate-left text-sm"></i>
+      <span class="text-[10px] font-semibold mt-1">History</span>
+    </button>
+    <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-slate-400 hover:text-white active:scale-95 transition-all">
+      <i class="fa-solid fa-gear text-sm"></i>
+      <span class="text-[10px] font-semibold mt-1">Settings</span>
+    </button>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-16 inset-x-4 max-w-xs mx-auto z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none">
+    <div id="toastInner" class="glass-card px-4 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold text-white shadow-2xl flex items-center space-x-2">
+      <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+      <span id="toastMsg">Action completed</span>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- APPLICATION SCRIPT LOGIC -->
+  <!-- ============================================================== -->
+  <script>
+    // State
+    let enteredPin = "";
+    let isUnlocked = false;
+    let ws = null;
+    let currentTab = 'positions';
+
+    // -------------------------------------------------------------
+    // PWA & Service Worker Registration
+    // -------------------------------------------------------------
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+      });
+    }
+
+    // -------------------------------------------------------------
+    // PIN Lock Mechanism
+    // -------------------------------------------------------------
+    function pressKey(num) {
+      if (enteredPin.length < 4) {
+        enteredPin += num;
+        updatePinDots();
+        if (enteredPin.length === 4) {
+          verifyPinAttempt();
+        }
+      }
+    }
+
+    function clearPin() {
+      enteredPin = "";
+      updatePinDots();
+      document.getElementById('pinError').innerText = "";
+    }
+
+    function backspacePin() {
+      if (enteredPin.length > 0) {
+        enteredPin = enteredPin.slice(0, -1);
+        updatePinDots();
+        document.getElementById('pinError').innerText = "";
+      }
+    }
+
+    function updatePinDots() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (i < enteredPin.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
+      }
+    }
+
+    async function verifyPinAttempt() {
+      try {
+        const res = await fetch('/api/verify-pin', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ pin: enteredPin })
+        });
+        if (res.ok) {
+          isUnlocked = true;
+          sessionStorage.setItem('pin_authenticated', 'true');
+          document.getElementById('pinModal').classList.add('hidden');
+          showToast('Unlocked successfully', 'success');
+          loadData();
+        } else {
+          document.getElementById('pinError').innerText = "Incorrect PIN. Try 1234";
+          setTimeout(clearPin, 600);
+        }
+      } catch (e) {
+        // Fallback for local quick test
+        if (enteredPin === "1234") {
+          isUnlocked = true;
+          document.getElementById('pinModal').classList.add('hidden');
+        } else {
+          document.getElementById('pinError').innerText = "Incorrect PIN";
+          setTimeout(clearPin, 600);
+        }
+      }
+    }
+
+    function lockApp() {
+      isUnlocked = false;
+      sessionStorage.removeItem('pin_authenticated');
+      clearPin();
+      document.getElementById('pinModal').classList.remove('hidden');
+    }
+
+    // Check if session was already authenticated
+    if (sessionStorage.getItem('pin_authenticated') === 'true') {
+      isUnlocked = true;
+      document.getElementById('pinModal').classList.add('hidden');
+    }
+
+    // -------------------------------------------------------------
+    // Live Clock
+    // -------------------------------------------------------------
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-IN', { hour12: false }) + " IST";
+      document.getElementById('headerClock').innerText = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // -------------------------------------------------------------
+    // Tab Navigation
+    // -------------------------------------------------------------
+    function switchTab(tabId) {
+      currentTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      // Update Nav Buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-cyan-400');
+        btn.classList.add('text-slate-400');
+      });
+      document.getElementById(`nav-${tabId}`).classList.add('text-cyan-400');
+      document.getElementById(`nav-${tabId}`).classList.remove('text-slate-400');
+
+      if (tabId === 'screener') loadScreener();
+      if (tabId === 'history') loadHistory();
+      if (tabId === 'positions') loadPositions();
+    }
+
+    // -------------------------------------------------------------
+    // WebSocket / Polling Connection
+    // -------------------------------------------------------------
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          updateDashboardUI(data);
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 3000); // Reconnect
+      };
+    }
+    initWebSocket();
+
+    // Periodic poll fallback
+    setInterval(loadData, 3000);
+
+    async function loadData() {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          updateDashboardUI(data);
+        }
+        if (currentTab === 'positions') loadPositions();
+      } catch (e) {}
+    }
+
+    function updateDashboardUI(data) {
+      if (!data) return;
+
+      // Status Pill
+      const pill = document.getElementById('headerStatusPill');
+      if (data.status === 'RUNNING') {
+        pill.className = "text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1";
+        pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> RUNNING';
+      } else if (data.status === 'PAUSED') {
+        pill.className = "text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1";
+        pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> PAUSED';
+      } else {
+        pill.className = "text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1";
+        pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span> HALTED';
+      }
+
+      // Market text
+      document.getElementById('marketBadge').innerText = data.market_text;
+
+      // P&L Display
+      const pnl = data.net_pnl;
+      const pnlEl = document.getElementById('netPnlText');
+      const roiEl = document.getElementById('roiBadge');
+      const glowEl = document.getElementById('pnlGlow');
+
+      const sign = pnl >= 0 ? '+' : '';
+      pnlEl.innerText = `${sign}₹${Math.abs(pnl).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+      roiEl.innerText = `${sign}${data.roi_pct.toFixed(2)}%`;
+
+      if (pnl >= 0) {
+        pnlEl.className = "text-3xl font-extrabold text-emerald-400 font-mono tracking-tight";
+        roiEl.className = "text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono";
+        glowEl.className = "absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/20 blur-2xl";
+      } else {
+        pnlEl.className = "text-3xl font-extrabold text-rose-400 font-mono tracking-tight";
+        roiEl.className = "text-xs font-bold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-mono";
+        glowEl.className = "absolute -top-12 -right-12 w-32 h-32 rounded-full bg-rose-500/20 blur-2xl";
+      }
+
+      // Financials
+      document.getElementById('portfolioValue').innerText = `₹${data.portfolio_value.toLocaleString('en-IN')}`;
+      document.getElementById('cashBalance').innerText = `₹${data.cash_balance.toLocaleString('en-IN')}`;
+      document.getElementById('winRate').innerText = `${data.win_rate}% (${data.total_trades}T)`;
+      document.getElementById('posCountBadge').innerText = data.positions_count;
+
+      // Risk Shield
+      const bar = document.getElementById('riskBar');
+      const usedPct = data.loss_limit_used_pct;
+      bar.style.width = `${Math.min(100, usedPct)}%`;
+      document.getElementById('lossUsedText').innerText = `${usedPct}%`;
+      document.getElementById('maxLossText').innerText = `${data.daily_loss_limit_pct}% (-₹${data.daily_loss_limit_amt})`;
+
+      if (usedPct > 75) {
+        bar.className = "bg-rose-500 h-2 rounded-full transition-all duration-500";
+      } else if (usedPct > 40) {
+        bar.className = "bg-amber-500 h-2 rounded-full transition-all duration-500";
+      } else {
+        bar.className = "bg-emerald-500 h-2 rounded-full transition-all duration-500";
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Positions
+    // -------------------------------------------------------------
+    async function loadPositions() {
+      try {
+        const res = await fetch('/api/positions');
+        const positions = await res.json();
+        const container = document.getElementById('positionsList');
+
+        if (!positions || positions.length === 0) {
+          container.innerHTML = `
+            <div class="glass-card rounded-2xl p-6 text-center text-slate-500 space-y-2">
+              <i class="fa-solid fa-folder-open text-2xl text-slate-600"></i>
+              <p class="text-xs">No active open positions currently.</p>
+              <p class="text-[10px] text-slate-600">Bot is scanning watchlist for 15m breakout & VWAP confluence.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = positions.map(p => {
+          const isProfit = p.unrealized_pnl >= 0;
+          const sign = isProfit ? '+' : '';
+          const pnlColor = isProfit ? 'text-emerald-400' : 'text-rose-400';
+          const pnlBg = isProfit ? 'bg-emerald-500/10' : 'bg-rose-500/10';
+
+          return `
+            <div class="glass-card rounded-2xl p-4 border border-cardBorder space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-bold text-white text-sm tracking-wide">${p.symbol}</h3>
+                  <span class="text-[10px] text-slate-400 font-mono">Qty: ${p.quantity} shares • Entry ₹${p.entry_price}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-sm font-extrabold font-mono ${pnlColor}">${sign}₹${p.unrealized_pnl}</span>
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${pnlBg} ${pnlColor} block mt-0.5">${sign}${p.pnl_pct}%</span>
+                </div>
+              </div>
+
+              <!-- SL & Target Indicators -->
+              <div class="grid grid-cols-3 gap-2 bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 text-[10px] font-mono">
+                <div>
+                  <span class="text-slate-500 block">LTP</span>
+                  <span class="text-white font-bold">₹${p.current_price}</span>
+                </div>
+                <div>
+                  <span class="text-rose-400 block">Stop Loss</span>
+                  <span class="text-slate-300">₹${p.stop_loss}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-emerald-400 block">Target (1:2)</span>
+                  <span class="text-slate-300">₹${p.target}</span>
+                </div>
+              </div>
+
+              <!-- 1-Tap Close Button -->
+              <button onclick="closeSinglePosition('${p.symbol}')" class="w-full py-2 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-400 font-semibold text-xs rounded-xl border border-slate-700 hover:border-rose-500/40 flex items-center justify-center space-x-1.5 active:scale-95 transition-all">
+                <i class="fa-solid fa-arrow-right-from-bracket text-[10px]"></i>
+                <span>Square-Off Position</span>
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+
+    async function closeSinglePosition(symbol) {
+      if (!confirm(`Confirm square-off for ${symbol}?`)) return;
+      try {
+        const res = await fetch(`/api/positions/close/${symbol}`, { method: 'POST' });
+        if (res.ok) {
+          showToast(`Closed ${symbol} at market`, 'success');
+          loadData();
+          loadPositions();
+        }
+      } catch (e) {
+        showToast('Failed to close position', 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Screener
+    // -------------------------------------------------------------
+    async function loadScreener() {
+      try {
+        const res = await fetch('/api/watchlist');
+        const list = await res.json();
+        const container = document.getElementById('screenerList');
+
+        container.innerHTML = list.map(item => {
+          const isPos = item.change_pct >= 0;
+          const chgColor = isPos ? 'text-emerald-400' : 'text-rose-400';
+          const scoreBadge = item.score >= 80 
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+            : 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+
+          return `
+            <div class="glass-card rounded-2xl p-3.5 border border-cardBorder flex items-center justify-between">
+              <div class="space-y-0.5">
+                <div class="flex items-center space-x-1.5">
+                  <span class="font-bold text-white text-xs">${item.symbol}</span>
+                  ${item.runner ? '<span class="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1 rounded font-bold">10-15% RUNNER</span>' : ''}
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono flex items-center space-x-2">
+                  <span>LTP: ₹${item.ltp}</span>
+                  <span class="${chgColor}">${item.change_pct > 0 ? '+' : ''}${item.change_pct}%</span>
+                  <span>RSI: ${item.rsi}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${scoreBadge}">
+                  ⭐ ${item.score}/100
+                </span>
+                <span class="text-[9px] text-slate-400 block mt-1">${item.trend}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------
+    // History
+    // -------------------------------------------------------------
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const list = await res.json();
+        const container = document.getElementById('historyList');
+
+        if (!list || list.length === 0) {
+          container.innerHTML = `
+            <div class="glass-card rounded-2xl p-6 text-center text-slate-500 text-xs">
+              No completed trades yet today.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = list.map(t => {
+          const isWin = t.net_pnl >= 0;
+          const pnlColor = isWin ? 'text-emerald-400' : 'text-rose-400';
+          const sign = isWin ? '+' : '';
+
+          return `
+            <div class="glass-card rounded-2xl p-3.5 border border-cardBorder flex items-center justify-between">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-white text-xs">${t.symbol}</span>
+                  <span class="text-[9px] bg-slate-800 text-slate-400 px-1 rounded font-mono">${t.exit_reason}</span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+                  Entry ₹${t.entry_price} → Exit ₹${t.exit_price} (${t.quantity} sh)
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-bold font-mono ${pnlColor}">${sign}₹${t.net_pnl}</span>
+                <span class="text-[9px] text-slate-500 block font-mono">Tax: ₹${t.commission}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------
+    // Emergency Kill Switch
+    // -------------------------------------------------------------
+    function openKillModal() {
+      document.getElementById('confirmKillModal').classList.remove('hidden');
+    }
+    function closeKillModal() {
+      document.getElementById('confirmKillModal').classList.add('hidden');
+    }
+
+    async function executeKillSwitch() {
+      closeKillModal();
+      try {
+        const res = await fetch('/api/kill-switch', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Kill Switch Triggered!', 'error');
+        loadData();
+        loadPositions();
+      } catch (e) {
+        showToast('Kill Switch Failed', 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Bot Toggle
+    // -------------------------------------------------------------
+    async function toggleBotState(action) {
+      try {
+        const res = await fetch(`/api/bot/${action}`, { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message, 'success');
+        loadData();
+      } catch (e) {
+        showToast(`Failed to ${action} bot`, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Quick Simulation Demo
+    // -------------------------------------------------------------
+    async function runSimulation() {
+      try {
+        showToast('Running 3-sec simulation...', 'info');
+        const res = await fetch('/api/simulation/run', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message, 'success');
+        loadData();
+        if (currentTab === 'history') loadHistory();
+      } catch (e) {
+        showToast('Simulation failed', 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Settings Handlers
+    // -------------------------------------------------------------
+    async function updatePin() {
+      const oldPin = document.getElementById('oldPinInput').value;
+      const newPin = document.getElementById('newPinInput').value;
+      if (!oldPin || !newPin) {
+        showToast('Please enter both old & new PIN', 'error');
+        return;
+      }
+      try {
+        const res = await fetch('/api/change-pin', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ old_pin: oldPin, new_pin: newPin })
+        });
+        if (res.ok) {
+          showToast('PIN updated successfully!', 'success');
+          document.getElementById('oldPinInput').value = '';
+          document.getElementById('newPinInput').value = '';
+        } else {
+          showToast('Failed to update PIN (check old PIN)', 'error');
+        }
+      } catch (e) {
+        showToast('Error updating PIN', 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Toast Helper
+    // -------------------------------------------------------------
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.innerText = msg;
+      if (type === 'error') {
+        toastIcon.className = "fa-solid fa-circle-exclamation text-rose-400";
+      } else if (type === 'info') {
+        toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+      } else {
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+      }
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3000);
+    }
+
+    // Initial Load
+    loadData();
+    loadPositions();
+  </script>
+</body>
+</html>

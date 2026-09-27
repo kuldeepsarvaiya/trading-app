@@ -1,0 +1,16 @@
+symbol,name,exchange,sector
+RELIANCE.NS,Reliance Industries,NSE,Energy
+TCS.NS,Tata Consultancy Services,NSE,IT
+INFY.NS,Infosys Ltd,NSE,IT
+HDFCBANK.NS,HDFC Bank,NSE,Banking
+ICICIBANK.NS,ICICI Bank,NSE,Banking
+SBIN.NS,State Bank of India,NSE,Banking
+BHARTIARTL.NS,Bharti Airtel,NSE,Telecom
+AXISBANK.NS,Axis Bank,NSE,Banking
+LICI.NS,Life Insurance Corp,NSE,Financial Services
+ITC.NS,ITC Ltd,NSE,FMCG
+AAPL,Apple Inc,NASDAQ,Technology
+MSFT,Microsoft Corp,NASDAQ,Technology
+NVDA,NVIDIA Corp,NASDAQ,Semiconductors
+TSLA,Tesla Inc,NASDAQ,Automotive
+AMZN,Amazon.com,NASDAQ,Consumer Discretionary

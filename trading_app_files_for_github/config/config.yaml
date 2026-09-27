@@ -1,0 +1,62 @@
+# Intraday Algo Trading Bot Configuration
+
+app:
+  name: "IntradayAlgoBot"
+  version: "1.0.0"
+  log_level: "INFO"
+  data_dir: "data_storage"
+
+account:
+  initial_capital: 50000.0   # Account capital (in INR or USD)
+  currency: "INR"           # Currency symbol: INR or USD
+
+risk_management:
+  risk_per_trade_percent: 1.0     # Maximum risk per single trade (1% of capital)
+  max_daily_loss_percent: 3.0     # Daily circuit breaker: stop all trading if daily loss hits 3%
+  max_open_positions: 3           # Maximum simultaneous open positions
+  reward_to_risk_ratio: 2.0       # Minimum Target R:R (e.g. 1:2)
+  use_trailing_stop: true         # Enable trailing stop loss
+  breakeven_trigger_r: 1.0        # Move SL to breakeven once price reaches +1R profit
+  trail_step_atr: 1.0             # Trailing distance in terms of ATR once past breakeven
+  max_capital_per_trade_percent: 30.0 # Maximum position size cap as % of total capital
+
+market:
+  name: "NSE"                     # NSE (India) or US (NYSE/NASDAQ)
+  timezone: "Asia/Kolkata"        # Timezone for market hours
+  session_open: "09:15"           # Market open time (HH:MM)
+  entry_start: "09:30"            # Earliest entry time (after 15-min opening range)
+  entry_cutoff: "11:30"           # No new trade entries after this time to avoid midday chop
+  square_off_time: "15:15"        # Mandatory intraday square-off time (MIS exit)
+  session_close: "15:30"          # Market close time
+
+strategy:
+  name: "ORB_VWAP_Momentum"
+  timeframe: "5m"                 # Strategy execution candle timeframe
+  orb_window_minutes: 15          # Opening Range duration in minutes (9:15 - 9:30)
+  ema_fast: 9                     # Fast EMA period
+  ema_slow: 21                    # Slow EMA period
+  rsi_period: 14                  # RSI period
+  rsi_min: 52.0                   # Minimum RSI for BUY confirmation (bullish momentum)
+  rsi_max: 75.0                   # Maximum RSI (avoid extreme overbought exhaustion)
+  volume_avg_period: 20           # Period to calculate 20-MA volume
+  volume_surge_multiplier: 1.3    # Breakout candle volume must be >= 1.3x 20-MA volume
+  atr_period: 14                  # ATR period for dynamic Stop-Loss
+  atr_sl_multiplier: 1.5          # Stop-Loss = Entry - (ATR * multiplier)
+
+execution:
+  mode: "paper"                   # "paper" for virtual simulation, "live" for real broker
+  slippage_percent: 0.03          # Simulated slippage on market orders (0.03%)
+  commission_percent: 0.03        # Estimated roundtrip brokerage + taxes (0.03%)
+  broker_type: "paper"            # "paper", "zerodha", "angelone", "alpaca"
+
+symbols:
+  - "RELIANCE.NS"
+  - "TCS.NS"
+  - "INFY.NS"
+  - "HDFCBANK.NS"
+  - "ICICIBANK.NS"
+  - "SBIN.NS"
+  - "BHARTIARTL.NS"
+  - "AXISBANK.NS"
+  - "LICI.NS"
+  - "ITC.NS"

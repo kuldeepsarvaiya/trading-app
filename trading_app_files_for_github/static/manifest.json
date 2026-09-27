@@ -1,0 +1,21 @@
+{
+  "name": "AlphaTrader Mobile Algo Bot",
+  "short_name": "AlphaTrader",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2622/2622839.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2622/2622839.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
